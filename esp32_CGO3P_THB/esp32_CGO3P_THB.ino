@@ -29,7 +29,7 @@ Wiring depends on HW port definition below.
 const uint16_t X25_INIT_CRC = 0xFFFF;
 const byte FEheader = 0xFE;
 const byte nibblemask = 0x0F;
-const uint16_t channelmask = 0x0FFF; // 12 bytes per channel 
+const uint16_t channelmask = 0x0FFF; // 12 bit per channel 
 
 byte cgo3buffer[47];
 byte cgo3sequno = 0;
@@ -57,8 +57,7 @@ uint16_t UpscaleTo150 (int val, bool convert = true) {                  // Scale
 
 void setup() {
   btStop();
-//  Serial.begin(UART_speed);                                           // Debug
-//  Serial1.begin(UART_speed, SERIAL_8N1, SR24_RXD1, SR24_TXD1);        // SR24, could use both sources but currently not needed
+//  Serial.begin(UART_speed);                                           // Cannot be used at my module because USB goes to programmer mode
   Serial2.begin(UART_speed, SERIAL_8N1, CGO3_RXD2, CGO3_TXD2);          // Camera
   pinMode(AUX_PIN, OUTPUT);
   delay(100);
@@ -77,8 +76,12 @@ void loop() {
   if (Serial2.available() > 1) {
     incomingByte = Serial2.read();
     cgo3len = Serial2.peek();
-    if ((incomingByte == FEheader) && (cgo3len == 38)) {    // Possible a message ChannelData 5GHz.
+    if ((incomingByte == FEheader) && (cgo3len == 38)) {       // Possible a message ChannelData 5GHz.
       numreadbytes = Serial2.readBytes(cgo3buffer, cgo3len+9); 
+      
+//      Serial.write(incomingByte);                            // Pass through from gimbal to USB for calibration
+//      Serial.write(cgo3buffer, numreadbytes);
+
       if ((cgo3len > 0) && (numreadbytes == cgo3len+9) &&  (cgo3buffer[2] == 4) && (cgo3buffer[6] == 8)) {   // This SysID and Message ID contains channel data
 
 // Read pan mode first, we need it later      
@@ -123,5 +126,15 @@ void loop() {
       }
     } 
   }
+/* 
+Pass through messages from USB to gimbal
+for calibration via USB port
+*/
+/*
+  if (Serial.available()) {
+    incomingByte = Serial.read();
+    Serial2.write(incomingByte);
+  }
+*/  
 }
 
